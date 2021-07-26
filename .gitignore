@@ -1,0 +1,44 @@
+*.class
+*.log
+*.iml
+.DS_Store
+
+
+**/*.iml
+**/workspace.xml
+
+# sbt specific
+.cache
+.history
+.lib/
+.idea/*
+dist/*
+**/target/**/*
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
+
+# Scala-IDE specific
+.scala_dependencies
+.worksheet
+
+# Maven specific
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+/target/
+
+# gatling-fatjar specific
+gatling-fatjar-assembly/target/*
+gatling-fatjar-assembly/gatling-fatjar-build/tools/*
+gatling-fatjar-assembly/src/main/*
+gatling-fatjar-assembly/gatling-fatjar-build/gatling.jar
+gatling-fatjar-assembly/gatling-fatjar-build/perfResults/*
+gatling-fatjar-assembly/gatling-fatjar-build/results/*
+
