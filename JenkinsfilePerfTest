@@ -1,0 +1,239 @@
+// Sample Jenkinsfile for running sagemaker-gatling.
+
+// This job is for running a single perf test to a SageMaker endpoint that is already deployed.
+// It does not change any endpoint configurations.
+
+// It is an option for ad hoc or exploratory testing. In contrast, running the full
+// perfsize-sagemaker flow would change endpoint configurations and run multiple tests.
+
+def notifyEmail = 'user@example.com'
+def dockerImage = 'amazonlinux:latest'
+def jenkinsRole = 'arn:aws:iam::111111111111:role/your-role-name-here'
+
+def credentials = input(
+    id: 'credentials',
+    message: "Please enter credentials for the desired account",
+    parameters : [
+        [
+            $class: 'TextParameterDefinition',
+            name: 'aws_access_key_id',
+            defaultValue: '',
+            description: 'ID of temporary access key'
+        ],
+        [
+            $class: 'TextParameterDefinition',
+            name: 'aws_secret_access_key',
+            defaultValue: '',
+            description: 'Secret of temporary access key'
+        ],
+        [
+            $class: 'TextParameterDefinition',
+            name: 'aws_session_token',
+            defaultValue: '',
+            description: 'Session token of temporary access key'
+        ]
+    ]
+)
+
+pipeline {
+    agent {
+        kubernetes {
+            label "sagemaker-gatling-pod-${UUID.randomUUID().toString()}"
+            defaultContainer "sagemaker-gatling"
+            yaml """
+            apiVersion: v1
+            kind: Pod
+            metadata:
+                annotations:
+                    iam.amazonaws.com/role: ${jenkinsRole}
+            spec:
+                containers:
+                - name: sagemaker-gatling
+                  resources:
+                    requests:
+                      cpu: 3000m
+                      memory: 15Gi
+                  image: ${dockerImage}
+                  command:
+                  - cat
+                  tty: true
+            """
+        }
+    }
+    parameters {
+        choice(
+            name: 'HOST',
+            description: 'Target host that will receive traffic',
+            choices: ['runtime.sagemaker.us-west-2.amazonaws.com']
+        )
+        choice(
+            name: 'REGION',
+            description: 'Target region should match host',
+            choices: ['us-west-2']
+        )
+        string(
+            name: 'ENDPOINT',
+            description: 'Name of SageMaker Endpoint',
+            defaultValue: 'LEARNING-model-simulator-1'
+        )
+        string(
+            name: 'EXTERNAL_PAYLOAD_GIT_REPO',
+            description: 'Git repo for request files',
+            defaultValue: 'https://github.com/intuit/some-other-example-repo'
+        )
+        string(
+            name: 'EXTERNAL_PAYLOAD_GIT_BRANCH',
+            description: 'Git branch for request files',
+            defaultValue: 'main'
+        )
+        text(
+            name: 'EXTERNAL_PAYLOAD_DISTRIBUTION',
+            description: 'Git file paths and weights for request distribution. Weights must sum to 100%.',
+            defaultValue: '[{"path":"src/test/resources/bodies/model-sim/1/status-200.input.json","weight":100}]'
+        )
+        string(
+            name: 'RAMP_START_TPS',
+            description: 'TPS to send at the start of the ramp',
+            defaultValue: '0'
+        )
+        string(
+            name: 'RAMP_DURATION',
+            description: 'Minutes of ramp',
+            defaultValue: '0'
+        )
+        string(
+            name: 'STEADY_TPS',
+            description: 'TPS to send at the steady state',
+            defaultValue: '1'
+        )
+        string(
+            name: 'STEADY_DURATION',
+            description: 'Minutes of steady state',
+            defaultValue: '1'
+        )
+        string(
+            name: 'EMAIL_LIST',
+            description: 'Comma separated list of email addresses',
+            defaultValue: 'user1@example.com,user2@example.com'
+        )
+    }
+    stages {
+        stage('TODO: move this to Docker') {
+            steps {
+                dir("${env.WORKSPACE}") {
+                    script {
+                        sh '''
+                            # Install the required tools
+                            yum update -y
+
+                            yum install java-1.8.0 -y
+                            yum install jq -y
+                            yum install sudo -y
+                            yum install unzip -y
+                            yum install wget -y
+                            yum install which -y
+
+                            # Install python 3.8
+                            # yum install python3 -y  # installs 3.7
+                            sudo amazon-linux-extras install python3.8
+                            sudo ln -s /usr/bin/python3.8 /usr/bin/python3
+                            python3 --version
+
+                            # Install AWS CLI
+                            # https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2-linux.html#cliv2-linux-install
+                            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+                            unzip awscliv2.zip
+                            sudo ./aws/install
+                            aws --version
+
+                            # Install pip
+                            # https://pip.pypa.io/en/stable/installing/#installing-with-get-pip-py
+                            curl -O https://bootstrap.pypa.io/get-pip.py
+                            sudo python3 get-pip.py
+                            pip --version
+
+                            # Install poetry
+                            # https://python-poetry.org/docs/#osx-linux-bashonwindows-install-instructions
+                            curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3 -
+                            export PATH="${PATH}:$HOME/.poetry/bin"
+                            echo $PATH
+                            poetry --version
+                        '''
+                    }
+                }
+            }
+        }
+        stage("Get pre-built gatling.jar") {
+            steps {
+                dir("${env.WORKSPACE}") {
+                    script {
+                        sh "wget -O ${env.WORKSPACE}/gatling.jar https://replace-with-hosted-location-of-jar-file/sagemaker-gatling-1.0-20210726.064819-1.jar"
+                    }
+                }
+            }
+        }
+        stage("Get external payloads") {
+            steps {
+                dir("external") {
+                    git url: "${params.EXTERNAL_PAYLOAD_GIT_REPO}.git",
+                        branch: "${params.EXTERNAL_PAYLOAD_GIT_BRANCH}",
+                        credentialsId: "ibp-github-creds"
+                    sh """
+                        echo ${env.WORKSPACE}
+                        pwd
+                        ls -lahFtr
+                    """
+                }
+            }
+        }
+        stage("Run simulation") {
+            environment {
+                AWS_ACCESS_KEY_ID = "${credentials['aws_access_key_id']}"
+                AWS_SECRET_ACCESS_KEY = "${credentials['aws_secret_access_key']}"
+                AWS_SESSION_TOKEN = "${credentials['aws_session_token']}"
+            }
+            steps {
+                dir("${env.WORKSPACE}") {
+                    script {
+                        sh '''
+                            # Need to prefix paths with folder where external payloads downloaded
+                            PREFIXED_DISTRIBUTION=$(echo "${EXTERNAL_PAYLOAD_DISTRIBUTION}" | jq -c 'map(.path |= "external/\\(.)")')
+
+                            java \
+                            -Dauth.awsAccessKeyId=${AWS_ACCESS_KEY_ID} \
+                            -Dauth.awsSecretAccessKey=${AWS_SECRET_ACCESS_KEY} \
+                            -Dauth.awsSessionToken=${AWS_SESSION_TOKEN} \
+                            -Dsagemaker.host=${HOST} \
+                            -Dsagemaker.region=${REGION} \
+                            -Dsagemaker.endpoint=${ENDPOINT} \
+                            -Dscenario.rampStartTps=${RAMP_START_TPS} \
+                            -Dscenario.rampMinutes=${RAMP_DURATION} \
+                            -Dscenario.steadyStateTps=${STEADY_TPS} \
+                            -Dscenario.steadyStateMinutes=${STEADY_DURATION} \
+                            -Dmlplatform.requests=${PREFIXED_DISTRIBUTION} \
+                            -Dgatling.core.outputDirectoryBaseName=${ENDPOINT} \
+                            -jar gatling.jar \
+                            -s GenericSageMakerScenario \
+                            -rf perfResults
+                        '''
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            archiveArtifacts artifacts: 'perfResults/**', fingerprint: true
+        }
+        success {
+            mail to: "${notifyEmail},${params.EMAIL_LIST}",
+                 subject: "Test Result | ${params.ENDPOINT} | ${env.JOB_BASE_NAME} | Build-${env.BUILD_NUMBER}",
+                 body: "Result: ${env.BUILD_URL}artifact/perfResults/"
+        }
+        unsuccessful { // covers "aborted", "failed", "unstable"
+            mail to: "${notifyEmail},${params.EMAIL_LIST}",
+                 subject: "ERROR: ${currentBuild.fullDisplayName}",
+                 body: "Job had an abnormal exit: ${env.BUILD_URL}"
+        }
+    }
+}

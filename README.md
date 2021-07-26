@@ -44,6 +44,15 @@ java \
 
 See maven example below for sample output.
 
+### Sample Jenkinsfile
+
+Another usage option is to host a job on Jenkins that enables users to run perf tests.
+
+See
+[JenkinsfilePerfTest](JenkinsfilePerfTest)
+as an example.
+
+
 
 ## Development
 
