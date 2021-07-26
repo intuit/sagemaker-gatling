@@ -208,11 +208,20 @@ uses a fatjar like this one for sending traffic loads.
 
 ### Deploy fatjar
 
-Create a new GitHub Release and update the version number accordingly.
+See Release process below.
 
-GitHub Action
-[maven-build-push.yml](.github/workflows/maven-build-push.yml)
-will then build and deploy the jar files.
+
+## Release
+
+Update the version in [pom.xml](pom.xml) as needed (RELEASE vs SNAPSHOT build).
+
+Create a new GitHub Release with a tag version as `v#.#` to correspond to the RELEASE version,
+or `v#.#-SNAPSHOT-timestamp` for a unique SNAPSHOT tag.
+
+GitHub Action [maven-build-push.yml](.github/workflows/maven-build-push.yml) will then package
+the build artifacts and deploy them to the GitHub Packages Maven repository.  TODO: In the future,
+will also deploy to the Maven Central repository.
+
 
 ## Contributing
 
