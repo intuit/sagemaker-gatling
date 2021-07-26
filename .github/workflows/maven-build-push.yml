@@ -35,7 +35,7 @@ jobs:
           # Need to make a dummy call to mvn help:evaluate because first time results in output like:
           # "Downloading from central: https://repo.maven.apache.org/..."
           # And later calls to `help:evaluate | grep` are only filtering out lines starting with [.
-          mvn help:evaluate -Dexpression=project.version
+          mvn --batch-mode help:evaluate -Dexpression=project.version > /dev/null 2>&1
 
           artifactId=$(mvn help:evaluate -Dexpression=project.artifactId | grep -e '^[^\\[]')
           echo $artifactId
@@ -52,6 +52,6 @@ jobs:
           # deploy:deploy because only want to deploy and not rebuild
           # jar:jar because it will populate the build context but not recreate jars
           # https://stackoverflow.com/questions/6308162/
-          mvn jar:jar deploy:deploy -s $GITHUB_WORKSPACE/settings.xml
+          mvn --batch-mode jar:jar deploy:deploy -s $GITHUB_WORKSPACE/settings.xml
         env:
           GITHUB_TOKEN: ${{ github.token }}
