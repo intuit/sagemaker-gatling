@@ -2,7 +2,7 @@
 
 # sagemaker-gatling
 
-![Maven Deploy](https://github.com/intuit/sagemaker-gatling/actions/workflows/maven-build-push.yml/badge.svg)
+[![Maven Deploy](https://github.com/intuit/sagemaker-gatling/actions/workflows/maven-build-push.yml/badge.svg)](https://github.com/intuit/sagemaker-gatling/actions/workflows/maven-build-push.yml)
 
 `sagemaker-gatling` can run performance tests on your deployed AWS SageMaker endpoint. It can be run
 as a jar file by itself, with configuration options for traffic level and durations. It can also be
