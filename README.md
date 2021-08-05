@@ -4,15 +4,27 @@
 
 [![Maven Deploy](https://github.com/intuit/sagemaker-gatling/actions/workflows/maven-build-push.yml/badge.svg)](https://github.com/intuit/sagemaker-gatling/actions/workflows/maven-build-push.yml)
 
-`sagemaker-gatling` can run performance tests on your deployed AWS SageMaker endpoint. It can be run
-as a jar file by itself, with configuration options for traffic level and durations. It can also be
-included as a dependency in other projects, like
-[perfsize-sagemaker](https://github.com/intuit/perfsize-sagemaker).
+`sagemaker-gatling` can run performance tests on your deployed AWS SageMaker endpoint.
 
-It is implemented with [Gatling](https://gatling.io/), which is an open source Scala-based
-performance simulation tool with a [rich DSL](https://gatling.io/docs/current/cheat-sheet/) for
-performance script coding. So you could also use this repo as an example starting point for
-creating more customized Gatling scenarios for your needs.
+This tool enables sending traffic by taking care of the request format required by SageMaker,
+including authorization headers, hashing, signing, and other requirements. In addition, you can
+specify desired traffic pattern by configuring options for ramp time, steady state time, TPS levels,
+and more. Thus, you can send custom traffic patterns without needing to code anything. You just
+need to give the sample request bodies and traffic configuration numbers.
+
+Possible use cases:
+- Run it as a jar file by itself, with configuration options for traffic level and durations.
+- Include it as a dependency in other projects, like
+  [perfsizesagemaker](https://github.com/intuit/perfsizesagemaker).
+- Reference it as an example starting point for creating more customized scenarios.
+  The project is implemented with
+  [Gatling](https://gatling.io/),
+  which is an open source Scala-based performance simulation tool with a
+  [rich DSL](https://gatling.io/docs/current/cheat-sheet/)
+  for performance script coding.
+
+Note this tool does not change any deployment settings of SageMaker endpoints directly. It only
+sends traffic (though the traffic can end up triggering auto scaling events).
 
 
 ## Usage
